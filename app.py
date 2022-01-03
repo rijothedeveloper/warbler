@@ -314,11 +314,16 @@ def homepage():
     """
 
     if g.user:
+        following = g.user.following
         messages = (Message
                     .query
                     .order_by(Message.timestamp.desc())
-                    .limit(100)
                     .all())
+        
+        messages = [message for message in messages if message.user in following]
+        
+        # slice first 100 messages if more than 100 messages
+        messages[0:99]
 
         return render_template('home.html', messages=messages)
 
