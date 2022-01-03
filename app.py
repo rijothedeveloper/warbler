@@ -5,7 +5,7 @@ from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
 from forms import UserAddForm, LoginForm, MessageForm, UserEditForm
-from models import db, connect_db, User, Message
+from models import Likes, db, connect_db, User, Message
 
 CURR_USER_KEY = "curr_user"
 
@@ -324,11 +324,37 @@ def homepage():
         
         # slice first 100 messages if more than 100 messages
         messages[0:99]
-
-        return render_template('home.html', messages=messages)
+        likedmessages = g.user.likes
+        return render_template('home.html', messages=messages, likedmessages=likedmessages)
 
     else:
         return render_template('home-anon.html')
+    
+@app.route("/users/add_like/<int:message_id>", methods=["POST"])
+def add_like(message_id):
+    if g.user:
+        already_liked = Likes.query.filter(Likes.message_id == message_id and Likes.user_id == g.user.id).first()
+        # if this request to unlike
+        if already_liked:
+            Likes.query.filter(Likes.id == already_liked.id).delete()
+            db.session.commit()
+            return redirect("/")
+        else:
+            like = Likes(user_id=g.user.id, message_id=message_id)
+            db.session.add(like)
+            db.session.commit()
+            return redirect("/")
+    flash("cannot like","danger")
+    return redirect("/")
+    
+@app.route("/users/remove_like/<int:message_id>", methods=["POST"])
+def remove_like(message_id):
+    if g.user:
+        Likes.query.filter(Likes.message_id == message_id and Likes.user_id == g.user.id).delete()
+        db.session.commit()
+        return redirect("/")
+    flash("cannot un like","danger")
+    return redirect("/")
 
 
 ##############################################################################
